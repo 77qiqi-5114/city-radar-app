@@ -100,7 +100,7 @@ with tab1:
     m_col, i_col = st.columns([2.5, 1])
     
     with m_col:
-        st.subheader(f"🗺️ {city_choice}·产业集聚分布图 (5000点实时渲染)")
+        st.subheader(f"🗺️ {city_choice}·产业集聚分布图")
         # 从云端数据库拉取 5000 条数据
         df_map = load_data(f"SELECT * FROM spatial_cluster_results WHERE 城市代码 = {sel['code']} LIMIT 5000")
         
