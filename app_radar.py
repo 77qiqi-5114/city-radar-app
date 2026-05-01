@@ -60,7 +60,7 @@ with tab1:
     
     with m_col:
         st.subheader(f"🗺️ {city_choice}·产业集聚分布图")
-        df_map = load_data(f"SELECT * FROM spatial_cluster_results WHERE 城市代码 = {sel['code']} LIMIT 5000")
+        df_map = load_data(f"SELECT * FROM spatial_cluster_results WHERE 城市代码 = {sel['code']} LIMIT 3000")
         
         if not df_map.empty:
             amap_url = 'http://webrd02.is.autonavi.com/appmaptile?lang=zh_cn&size=1&scale=1&style=7&x={x}&y={y}&z={z}'
