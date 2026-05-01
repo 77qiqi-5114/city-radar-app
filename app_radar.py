@@ -52,26 +52,30 @@ industry_dict = {
 }
 
 # ==========================================
-# 1. 数据库连接与智能加载
+# 1. 数据库连接与防弹检测机制
 # ==========================================
 @st.cache_resource
 def init_connection():
     try:
         return create_engine(st.secrets["DB_URL"])
+    except KeyError:
+        st.error("🚨 **致命错误：未找到数据库配置！** \n请前往 Streamlit Cloud 的 `Settings` -> `Secrets`，确保里面填写了 `DB_URL = \"postgresql://...\"`")
+        st.stop()
     except Exception as e:
-        st.error(f"❌ 数据库配置缺失: {e}")
+        st.error(f"🚨 **数据库连接失败：** {e}")
         st.stop()
 
 engine = init_connection()
 
-# 🚨 修复：恢复成直接执行具体 SQL，避免一次性拉取 7 万条数据导致内存崩溃
 @st.cache_data(ttl=300)
 def load_data(query):
     try:
         df = pd.read_sql(query, engine)
         df.columns = [str(c).lower().strip() for c in df.columns]
         return df
-    except Exception:
+    except Exception as e:
+        # 🚨 如果查询出错，强制在屏幕上打出红色报错！
+        st.error(f"🚨 **数据拉取异常**：执行 SQL [{query}] 时出错。详细信息：{e}")
         return pd.DataFrame()
 
 @st.cache_data
@@ -83,8 +87,7 @@ def get_city_boundary(adcode):
 # 2. 侧边栏
 # ==========================================
 with st.sidebar:
-    st.title("📡 City-Radar v5.2")
-    # ✅ 这里改成了你需要的文字
+    st.title("📡 City-Radar v5.3")
     st.success("✨ 系统运行环境正常 | 云端已连接") 
     city_choice = st.radio("📍 选择分析城市：", ["北京", "苏州", "深圳"])
     if st.button("🔄 刷新系统缓存"):
@@ -104,7 +107,6 @@ with tab1:
     m_col, i_col = st.columns([2.5, 1])
     with m_col:
         st.subheader(f"🗺️ {city_choice}·产业集聚分布图")
-        # 🚨 修复：让数据库自己去挑 5000 条，瞬间加载完成
         df_map = load_data(f"SELECT * FROM spatial_cluster_results WHERE 城市代码 = {sel['code']} LIMIT 5000")
         
         if not df_map.empty:
@@ -124,7 +126,7 @@ with tab1:
             
             st_folium(m, width=900, height=550, returned_objects=[], key=f"map_{city_choice}")
         else:
-            st.warning("⚠️ 暂无该城市的地理坐标数据。")
+            st.warning("⚠️ 暂无该城市的地理坐标数据。如果上方有红色报错，请根据报错检查数据库。")
 
     with i_col:
         st.subheader("📋 ANN 显著性检验")
@@ -162,10 +164,10 @@ with tab2:
                 fig = px.bar(df_sal, x="premium_rate", y="特征", orientation='h', color="premium_rate", color_continuous_scale="GnBu")
                 st.plotly_chart(fig, use_container_width=True)
                 
-            # ✅ 这里完美保留了你要求的数学公式和JSON参数
             with st.expander("🛠️ 查看详细模型评估"):
                 st.markdown("**核心评估函数 (Hedonic Wage Model):**")
-                st.latex(r"\ln(Salary) = \beta_0 + \sum_{i=1}^{n} \beta_i \cdot Skill_i + \gamma \cdot Controls + \epsilon")
+                # ✅ 修复乱码：改用 Markdown 双美元符号包裹，强制渲染数学公式
+                st.markdown(r"$$\ln(Salary) = \beta_0 + \sum_{i=1}^{n} \beta_i \cdot Skill_i + \gamma \cdot Controls + \epsilon$$")
                 
                 st.markdown("**模型效度评估结果:**")
                 FIXED_EVAL_DATA = {
@@ -198,7 +200,7 @@ with tab3:
     df_imp = load_data("SELECT * FROM survival_feature_importance")
     
     if not df_imp.empty and len(df_imp.columns) >= 2:
-        df_imp = df_imp.iloc[:, :2]  # 保险起见，只取前两列
+        df_imp = df_imp.iloc[:, :2]
         df_imp.columns = ['feature', 'importance']
         df_imp = df_imp.sort_values('importance', ascending=False)
         fig_imp = px.bar(df_imp, x="importance", y="feature", orientation='h', color="importance", color_continuous_scale="Reds")
