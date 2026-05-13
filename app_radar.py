@@ -80,6 +80,8 @@ with m_col:
         m = folium.Map(
             location=[sel['lat'], sel['lng']], 
             zoom_start=sel['zoom'], # ✅ 修改点 4：使用字典里配置的动态缩放级别
+            tiles=amap_url, 
+            attr='高德地图'
         )
         
         marker_cluster = MarkerCluster().add_to(m)
