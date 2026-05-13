@@ -36,7 +36,7 @@ def load_data(query):
 with st.sidebar:
     st.title("📡 City-Radar v3.0")
     st.success("✨ 欢迎使用城市产业与人才空间雷达系统")
-    city_choice = st.radio("📍 选择分析城市：", ["北京", "苏州", "深圳"])
+    city_choice = st.radio("📍 选择分析城市：", ["全国", "北京", "苏州", "深圳"])
     if st.button("🔄 刷新系统数据"):
         st.cache_data.clear()
         st.rerun()
@@ -47,7 +47,13 @@ st.title("🏙️ 城市产业与人才空间雷达系统")
 st.markdown("##### 📍 空间聚类格局")
 st.write("---")
 
-city_cfg = {"北京": {"lat": 39.9042, "lng": 116.4074, "code": 110000}, "苏州": {"lat": 31.2990, "lng": 120.6190, "code": 320500}, "深圳": {"lat": 22.5431, "lng": 114.0579, "code": 440300}}
+# ✅ 修改点 2：加入全国配置，并为每个选项加上 zoom 字段
+city_cfg = {
+    "全国": {"lat": 35.8617, "lng": 104.1954, "code": "ALL", "zoom": 5}, # 全国中心点，zoom 设为 5
+    "北京": {"lat": 39.9042, "lng": 116.4074, "code": 110000, "zoom": 11},
+    "苏州": {"lat": 31.2990, "lng": 120.6190, "code": 320500, "zoom": 11},
+    "深圳": {"lat": 22.5431, "lng": 114.0579, "code": 440300, "zoom": 11}
+}
 sel = city_cfg[city_choice]
 
 # 保持左右两列的布局
@@ -58,13 +64,22 @@ m_col, i_col = st.columns([2.5, 1])
 # ------------------------------------------
 with m_col:
     st.subheader(f"🗺️ {city_choice}·产业集聚分布图")
-    df_map = load_data(f"SELECT * FROM spatial_cluster_results WHERE 城市代码 = {sel['code']} LIMIT 3000")
+    
+    # ✅ 修改点 3：根据是否是“全国”动态生成 SQL 语句
+    if sel['code'] == "ALL":
+        # 查询全国数据（没有 WHERE 限制）。建议把 LIMIT 调大一些，比如 10000 或 20000，视你的电脑性能而定
+        query = "SELECT * FROM spatial_cluster_results LIMIT 15000" 
+    else:
+        # 查询特定城市数据
+        query = f"SELECT * FROM spatial_cluster_results WHERE 城市代码 = {sel['code']} LIMIT 3000"
+        
+    df_map = load_data(query)
     
     if not df_map.empty:
         amap_url = 'http://webrd02.is.autonavi.com/appmaptile?lang=zh_cn&size=1&scale=1&style=7&x={x}&y={y}&z={z}'
         m = folium.Map(
             location=[sel['lat'], sel['lng']], 
-            zoom_start=11, 
+            zoom_start=sel['zoom'], # ✅ 修改点 4：使用字典里配置的动态缩放级别
             tiles=amap_url, 
             attr='高德地图'
         )
