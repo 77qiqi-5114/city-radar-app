@@ -68,7 +68,7 @@ with m_col:
     # ✅ 修改点 3：根据是否是“全国”动态生成 SQL 语句
     if sel['code'] == "ALL":
         # 查询全国数据（没有 WHERE 限制）。建议把 LIMIT 调大一些，比如 10000 或 20000，视你的电脑性能而定
-        query = "SELECT * FROM spatial_cluster_results LIMIT 80000" 
+        query = "SELECT * FROM spatial_cluster_results LIMIT 50000" 
     else:
         # 查询特定城市数据
         query = f"SELECT * FROM spatial_cluster_results WHERE 城市代码 = {sel['code']} LIMIT 3000"
